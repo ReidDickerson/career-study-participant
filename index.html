@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Career Study Demo</title>
+<style>
+body { font-family: -apple-system, Helvetica, sans-serif; background: #17181C;
+  color: #E8E8EC; display: flex; min-height: 100vh; align-items: center;
+  justify-content: center; margin: 0; }
+.box { text-align: center; padding: 24px; }
+h1 { font-size: 1.1rem; font-weight: 600; }
+p { color: #9A9DA6; font-size: 0.85rem; max-width: 36ch; }
+input { font-size: 1rem; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid #30323A; background: #1F2127; color: #E8E8EC; width: 220px; }
+button { font-size: 1rem; padding: 10px 18px; border-radius: 8px; border: 0;
+  background: #6E5BB8; color: #fff; margin-left: 6px; cursor: pointer; }
+.err { color: #E07A7A; font-size: 0.85rem; min-height: 1.2em; }
+</style></head><body>
+<div class="box">
+<h1>Career Study &middot; participant demo</h1>
+<p>This page is a password-protected mock-up of a research study website.</p>
+<form id="f"><input id="pw" type="password" placeholder="password" autofocus>
+<button type="submit">Open</button></form>
+<p class="err" id="err"></p>
+</div>
+<script>
+const err = document.getElementById('err');
+async function unlock(pw, quiet) {
+  err.textContent = 'opening\u2026';
+  try {
+    const buf = new Uint8Array(await (await fetch('payload.bin')).arrayBuffer());
+    const salt = buf.slice(0, 16), nonce = buf.slice(16, 28), ct = buf.slice(28);
+    const keyMat = await crypto.subtle.importKey('raw',
+      new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: salt, iterations: 600000, hash: 'SHA-256' },
+      keyMat, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    const pt = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: nonce }, key, ct);
+    const html = new TextDecoder().decode(pt);
+    history.replaceState(null, '', '#participant'); document.open(); document.write(html); document.close();
+  } catch (ex) { err.textContent = quiet ? '' : 'wrong password'; }
+}
+document.getElementById('f').addEventListener('submit', e => {
+  e.preventDefault();
+  unlock(document.getElementById('pw').value, false);
+});
+</script></body></html>
